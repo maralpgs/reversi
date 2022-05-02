@@ -1,2 +1,3 @@
 #Ignore Visual studio files
 ./vs/*
+.vs/
