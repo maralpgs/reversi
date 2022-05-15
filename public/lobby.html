@@ -25,6 +25,16 @@
 
     <title>Reversi: Lobby</title>
 </head>
+
+<!-- NEED ACCESSIBILITY REVIEW -->
+<!--
+    
+    1. Can this chat area be accessible?
+    2. User needs notification if new message is received.
+    3. How will user read message?
+    
+    -->
+
 <body>
     <div class="container-fluid">
         <div class="row m=3 headerrow">
@@ -40,14 +50,16 @@
                 <div class="row align-items-center justify-content-center m=3">
                     <div class="col-8">
                         <div class="input-group">
-                            <input type="text" 
+                            <input type="text"
                                    class="form-control text-nowrap"
-                                   id="chatMessage" 
-                                   placeholder="Enter you message to send to the chat room"/>
-                            <button type="submit" 
-                                    class="btn btn-primary text-nowrap" 
-                                    id="chatButton" 
-                                    onclick="sendChatMessage()">Send</button>
+                                   id="chatMessage"
+                                   placeholder="Enter you message to send to the chat room" />
+                            <button type="submit"
+                                    class="btn btn-primary text-nowrap"
+                                    id="chatButton"
+                                    onclick="sendChatMessage()">
+                                Send
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -76,10 +88,10 @@
             crossorigin="anonymous"></script>
 
     <!-- Socket.io -->
-    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js" 
-            integrity="sha384-7EyYLQZgWBi67fBtVxw60/OWl1kjsfrPFcaU0pp0nAh+i8FD068QogUvg85Ewy1k" 
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"
+            integrity="sha384-7EyYLQZgWBi67fBtVxw60/OWl1kjsfrPFcaU0pp0nAh+i8FD068QogUvg85Ewy1k"
             crossorigin="anonymous"></script>
-    
+
     <!-- Main.js-->
     <script src="assets/js/main.js"></script>
 
