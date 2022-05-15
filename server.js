@@ -160,6 +160,7 @@ io.on('connection', (socket) => {
                 result: 'fail'
                 message: the reason for failure
     */
+
     socket.on('send_chat_message', (payload) => {
         serverLog('Server received a command', '\'send_chat_message\'', JSON.stringify(payload));
 
