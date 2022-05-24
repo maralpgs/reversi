@@ -12,14 +12,22 @@
             background-color: darkseagreen;
         }
 
+        #messagePane {
+            background-color: #c8dbc7;
+        }
+
+        .left_room_response,
         .join_room_response {
-            background-color: rgb(209, 209, 209);
-            margin: 1px 1px 1px 10px;
+            background-color: rgb(247, 247, 247);
         }
 
         .chat_message {
             font-size: 125%;
-            color: rgb(100, 1, 1);
+            color: rgb(63,63,63);
+        }
+        
+        div.show_border {
+            border: 1px solid black;
         }
     </style>
 
@@ -39,7 +47,7 @@
     <div class="container-fluid">
         <div class="row m=3 headerrow">
             <div class="col text-center">
-                <h1>Lobby</h1>
+                <h1 id="lobbyTitle">Lobby</h1>
             </div>
         </div>
 
@@ -47,8 +55,16 @@
             <div class="col">
 
 
-                <div class="row align-items-center justify-content-center m=3">
-                    <div class="col-8">
+                <div class="row align-items-start justify-content-center">
+                    <div class="col-md-4 show_border">
+                        <h2>Players</h2>
+                        <div id="players" class="align-items-end text-right m3"></div>
+                    </div>
+                    <div id="messagePane" class="col-md-8 show_border">
+                        <div>
+                            <h2>Messages</h2>
+                        </div>
+
                         <div class="input-group">
                             <input type="text"
                                    class="form-control text-nowrap"
@@ -61,12 +77,14 @@
                                 Send
                             </button>
                         </div>
+                        <div id="messages">
+                        </div>
                     </div>
                 </div>
-                <h2>Messages</h2>
-                <div id="messages">
 
-                </div>
+
+
+
             </div>
         </div>
     </div>
@@ -80,12 +98,17 @@
             integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
             crossorigin="anonymous"></script>
 
-
-
-    <!-- JQuery library-->
+    <!-- jQuery library-->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"
             integrity="sha384-vtXRMe3mGCbOeY7l30aIg8H9p3GdeSe4IFlP6G8JMa7o7lXvnz3GFKzPxzJdPfGK"
             crossorigin="anonymous"></script>
+
+    <!-- jQuery UI library-->
+    
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"
+            integrity="sha384-Dziy8F2VlJQLMShA6FHWNul/veM9bCkRUaLqr199K94ntO5QUrLJBEbYegdSkkqX"
+            crossorigin="anonymous"></script> 
+    
 
     <!-- Socket.io -->
     <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"
