@@ -879,12 +879,12 @@ function send_game_update(socket, game_id, message) {
     }
 
     // Step 7 - If game over, send appropriate message
-    if (count === 64) {
+    if (count === 5) {
         let payload = {}
         payload.result = 'success';
         payload.game_id = game_id;
         payload.game = games[game_id];
-        who_won = 'everyone';
+        payload.who_won = 'everyone';
         
         io.in(game_id).emit('game_over', payload);
 
