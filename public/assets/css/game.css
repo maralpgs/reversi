@@ -1,9 +1,7 @@
-body {
-    background-color: rgb(177,224, 177);
-}
+
 
 .headerrow, #messagePane {
-    background-color: #c8dbc7;
+    background-color: rgb(225, 234, 228);
 }
 
 .left_room_response,
@@ -13,7 +11,7 @@ body {
 
 .chat_message {
     font-size: 125%;
-    color: rgb(63,63,63);
+    color: rgb(223, 239, 222);
 }
 
 div.show_border {
@@ -26,11 +24,12 @@ table#game_board {
     padding: 0px;
 }
 
-table#game_board td {
-    border: 1px solid black;
-    margin: 0px;
-    padding: 0px;
-}
+    table#game_board td {
+        background-color: #c8dbc7;
+        border: 1px solid black;
+        margin: 0px;
+        padding: 0px;
+    }
 
 td.hovered_over:hover {
     background-image: url('/assets/images/hover.gif');

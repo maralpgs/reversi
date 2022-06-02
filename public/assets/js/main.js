@@ -295,8 +295,7 @@ socket.on('player_disconnected', (payload) => {
 
 
     let newHTML = '<p class=\'left_room_response\'>' +
-        payload.username + ' left the ' + payload.room +
-        '. (There are ' + payload.count + ' users in this room)</p>';
+        payload.username + ' left the chatroom. (There are ' + payload.count + ' users in this room)</p>';
     let newNode = $(newHTML);
     newNode.hide;
     $('#messages').prepend(newNode);
@@ -342,17 +341,18 @@ socket.on('send_chat_message_response', (payload) => {
 // Create game board
 // Initial status is unknown (?)
 let old_board = [
-    ['?', '?', '?', '?', '?', '?', '?', '?'],
-    ['?', '?', '?', '?', '?', '?', '?', '?'],
-    ['?', '?', '?', '?', '?', '?', '?', '?'],
-    ['?', '?', '?', '?', '?', '?', '?', '?'],
-    ['?', '?', '?', '?', '?', '?', '?', '?'],
-    ['?', '?', '?', '?', '?', '?', '?', '?'],
-    ['?', '?', '?', '?', '?', '?', '?', '?'],
-    ['?', '?', '?', '?', '?', '?', '?', '?']
+    [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+    [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+    [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+    [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+    [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+    [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+    [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+    [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ']
  ];
 
 let my_color = "";
+let interval_timer;
 
 
 /* Handles game update messages from server */
@@ -376,6 +376,7 @@ socket.on('game_update', (payload) => {
         return;
     }
     else {
+        // Debugging
         console.log(board);
     }
 
@@ -391,7 +392,29 @@ socket.on('game_update', (payload) => {
         window.location.href = 'lobby.html?username=' + username;
     }
 
-    $('#my_color').html('<h3 id="my_color">My token color: ' + my_color + '</h3>');
+   
+    if (my_color === 'white') {
+        $('#my_color').html('<h3 id="my_color">My token color: white</h3>');
+    }
+    else if (my_color === 'black') {
+        $('#my_color').html('<h3 id="my_color">My token color: black</h3>');
+    }
+    else {
+        $('#my_color').html('<h3 id="my_color">My token color: not known</h3>');
+    }
+
+
+    let whose_turn = payload.game.whose_turn;
+    // Update message about whose turn it is
+    if (whose_turn === 'white') {
+        $('#my_color').append('<h4 id="my_color">Turn: white</h4>');
+    }
+    else if (whose_turn === 'black') {
+        $('#my_color').append('<h4 id="my_color">Turn: black</h4>');
+    }
+    else {
+        $('#my_color').append('<h4 id="my_color">Turn: error, turn unknown</h4>');
+    }
 
 
     let whiteSum = 0;
@@ -465,13 +488,16 @@ socket.on('game_update', (payload) => {
                 const t = Date.now();
                 $('#' + row + '_' + column).html('<img class="img-fluid" src="assets/images/' + graphic + '?time=' + t + '"alt="' + altTag + '" />');
 
-                // Reset interactivity on the cell
-                $('#' + row + '_' + column).off('click');
+            }
 
-                // Add interactivity to empty cells
-                if (board[row][column] === ' ') {
+            // Reset interactivity on the cell
+            $('#' + row + '_' + column).off('click');
+            $('#' + row + '_' + column).removeClass('hovered_over');
+
+            // If it is this player's turn, then add interactivity to empty cells
+            if (payload.game.whose_turn === my_color) {
+                if (payload.game.legal_moves[row][column] === my_color.substr(0, 1)) {
                     $('#' + row + '_' + column).addClass('hovered_over');
-                    
                     $('#' + row + '_' + column).click(function (r, c) {
                         return function () {
                             var payload = {};
@@ -483,17 +509,41 @@ socket.on('game_update', (payload) => {
                             socket.emit('play_token', payload);
                         };
                     }(row, column));
-                    
                 }
-
-                // If it is not an empty cell
-                else {
-                    $('#' + row + '_' + column).removeClass('hovered_over');
-                }
-
             }
+
         }
     }
+
+    // Update timer
+    clearInterval(interval_timer)
+    interval_timer = setInterval(((last_time) => {
+        return (() => {
+            let d = new Date();
+            let elapsed_m = d.getTime() - last_time;
+            let minutes = Math.floor(elapsed_m / (1000 * 60));
+            let seconds = Math.floor((elapsed_m % (60 * 1000)) / 1000);
+            let total = minutes * 60 + seconds;
+            if (total > 100) {
+                total = 100;
+             
+            }
+            $("#elapsed").css("width", total + "%").attr("aria-valuenow", total);
+
+            let timestring = "" + seconds;
+            timestring = timestring.padStart(2, '0');
+            timestring = minutes + ":" + timestring;
+            if (total > 100) 
+                $("#elapsed").html("Times up!");
+            else {
+                $("#elapsed").html(timestring);
+            }
+            
+        })
+    })(payload.game.last_move_time)
+        , 1000);
+
+
 
     // Update score
     $("#whitesum").html(whiteSum);
@@ -513,6 +563,7 @@ socket.on('play_token_response', (payload) => {
     }
     if (payload.result === 'fail') {
         console.log(payload.message);
+        alert(payload.message);
         return;
     }
 })

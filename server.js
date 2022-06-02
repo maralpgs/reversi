@@ -602,7 +602,7 @@ io.on('connection', (socket) => {
 
         // Check if payload has data in it
         if ((typeof payload == 'undefined') || (payload === null)) {
-            response = {};
+            let response = {};
             response.result = 'fail';
             response.message = 'client did not send a payload';
             socket.emit('play_token_response', response);
@@ -613,7 +613,7 @@ io.on('connection', (socket) => {
         // Check if player is valid
         let player = players[socket.id];   
         if ((typeof player == 'undefined') || (player === null)) {
-            response = {};
+            let response = {};
             response.result = 'fail';
             response.message = 'play token came from an unregistered player';
             socket.emit('play_token_response', response);
@@ -624,7 +624,7 @@ io.on('connection', (socket) => {
         // Check if username is valid
         let username = player.username;
         if ((typeof username == 'undefined') || (username === null)) {
-            response = {};
+            let response = {};
             response.result = 'fail';
             response.message = 'play_token command did not come from a registered username';
             socket.emit('play_token_response', response);
@@ -635,7 +635,7 @@ io.on('connection', (socket) => {
         // Check if game_id is valid
         let game_id = player.room;
         if ((typeof game_id == 'undefined') || (game_id === null)) {
-            response = {};
+            let response = {};
             response.result = 'fail';
             response.message = 'there was not valid game associated with the play token command';
             socket.emit('play_token_response', response);
@@ -657,7 +657,7 @@ io.on('connection', (socket) => {
         // Check if column is valid
         let column = payload.column;
         if ((typeof column == 'undefined') || (column === null)) {
-            response = {};
+            let response = {};
             response.result = 'fail';
             response.message = 'there was not valid column associated with the play token command';
             socket.emit('play_token_response', response);
@@ -669,7 +669,7 @@ io.on('connection', (socket) => {
         // Check if color is valid
         let color = payload.color;
         if ((typeof color == 'undefined') || (color === null)) {
-            response = {};
+            let response = {};
             response.result = 'fail';
             response.message = 'there was not valid color associated with the play token command';
             socket.emit('play_token_response', response);
@@ -681,7 +681,7 @@ io.on('connection', (socket) => {
         // Check if game is valid
         let game = games[game_id];
         if ((typeof game == 'undefined') || (game === null)) {
-            response = {};
+            let response = {};
             response.result = 'fail';
             response.message = 'there was not valid game associated with the play token command';
             socket.emit('play_token_response', response);
@@ -689,6 +689,30 @@ io.on('connection', (socket) => {
             return;
         }
 
+
+        // Make sure the current attempt is by the correct color
+        if (color !== game.whose_turn) {
+            let response = {};
+            response.result = 'fail';
+            response.message = 'play_token played the wrong color. It is '+game.whose_turn+' turn';
+            socket.emit('play_token_response', response);
+            serverLog('play_token command failed. Error #13', JSON.stringify(response));
+            return;
+        }
+
+
+
+        // Make sure the current play is coming from the expected player
+        if (((game.whose_turn === 'white') && (game.player_white.socket != socket.id)) ||
+            ((game.whose_turn === 'black') && (game.player_black.socket != socket.id)))
+        {
+            let response = {};
+            response.result = 'fail';
+            response.message = 'play_token played the right color, but by the wrong player(socket)';
+            socket.emit('play_token_response', response);
+            serverLog('play_token command failed. Error #14', JSON.stringify(response));
+            return;
+        }
 
         // Send success play_token_response to client that sent play_token
         let response = {};
@@ -702,12 +726,22 @@ io.on('connection', (socket) => {
 
         if (color === 'white') {
             game.board[row][column] = 'w';
+            // Flip tokens that need to be flipped
+            flip_tokens('w',row,column,game.board);
             game.whose_turn = 'black';
+            game.legal_moves = calculate_legal_moves('b', game.board);
         }
         else if (color === 'black') {
             game.board[row][column] = 'b';
+            // Flip tokens that need to be flipped
+            flip_tokens('b', row, column, game.board);
             game.whose_turn = 'white';
+            game.legal_moves = calculate_legal_moves('w', game.board);
         }
+
+
+        let d = new Date();
+        game.last_move_time = d.getTime();
 
         send_game_update(socket, game_id, 'played a token');
     });
@@ -745,7 +779,7 @@ function create_new_game() {
     new_game.last_move_time = d.getTime();
 
     // Whose turn is it
-    new_game.whose_turn = 'white';              // White plays first
+    new_game.whose_turn = 'black';              // Black plays first
 
 
     // Create game board
@@ -760,8 +794,200 @@ function create_new_game() {
         [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ']
     ];
 
+    new_game.legal_moves = calculate_legal_moves('b', new_game.board);
+
     return new_game;
 }
+
+
+function check_line_match(color, delta_r, delta_c, r, c, board) {
+
+    if (board[r][c] === color) {
+        return true;
+    }
+    if (board[r][c] === ' ') {
+        return false;
+    }
+    // Check to make sure we aren't going to walk off the board
+    if ((r + delta_r < 0) || (r + delta_r > 7)) {
+        return false;
+    }
+    if ((c + delta_c < 0) || (c + delta_c > 7)) {
+        return false;
+    }
+
+    return (check_line_match(color, delta_r, delta_c, r + delta_r, c + delta_c, board));
+
+
+}
+
+
+
+// Return true if r + dr support supports playing at r
+// and c+dc supports playing at c
+function adjacent_support(who, delta_r, delta_c, r, c, board) {
+    let other;
+    if (who === 'b') {
+        other = 'w';
+    }
+    else if (who === 'w') {
+        other = 'b';
+    }
+    else {
+        console.log("Houston we have a problem:" + who);
+        return false;
+    }
+
+
+    // Check to see if adjacent support is on the board
+    if ((r + delta_r < 0) || (r + delta_r > 7)) {
+        return false;
+    }
+    if ((c + delta_c < 0) || (c + delta_c > 7)) {
+        return false;
+    }
+
+    // check that the opposite color is present next to us
+    if (board[r + delta_r][c + delta_c] !== other) {
+        return false;
+    }
+
+    // Check to make sure that there is space for a matching color to capture tokens
+    // (checking if 2 positions away is off the board)
+    if ((r + delta_r + delta_r < 0) || (r + delta_r + delta_r > 7)) {
+        return false;
+    }
+    if ((c + delta_c + delta_c < 0) || (c + delta_c + delta_c > 7)) {
+        return false;
+    }
+
+    return check_line_match(who, delta_r, delta_c, r + delta_r + delta_r, c + delta_c + delta_c, board);
+}
+
+
+
+// Calculate legal moves
+function calculate_legal_moves(who, board) {
+    let legal_moves = [
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+        [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ']
+    ];
+
+    for (let row = 0; row < 8; row++) {
+        for (let column = 0; column < 8; column++) {
+            if (board[row][column] === ' ') {
+                // check if adjacent positions are legal moves
+                let nn = adjacent_support(who, -1, 0, row, column, board); // check north: going up one row (-1) and keeping same column (0)
+                let ss = adjacent_support(who, 1, 0, row, column, board);  // check south: going down one row (1) and keeping same column (0)
+                let ww = adjacent_support(who, 0, -1, row, column, board); // check west: keep in the same row (0) and going to the left column (-1)
+                let ee = adjacent_support(who, 0, 1, row, column, board);  // check east: keep in the same row (0) and going to the right column (1)
+
+                let nw = adjacent_support(who, -1, -1, row, column, board); // check nw: going up one row (-1) and keeping same column (0)
+                let ne = adjacent_support(who, -1, 1, row, column, board);  // check ne: going down one row (1) and keeping same column (0)
+                let sw = adjacent_support(who, 1, -1, row, column, board); // check sw: keep in the same row (0) and going to the left column (-1)
+                let se = adjacent_support(who, 1, 1, row, column, board);  // check se: keep in the same row (0) and going to the right column (1)
+
+                if (nw || nn || ne || ww || ee || sw || ss || se) {
+                    legal_moves[row][column] = who;
+                }
+
+                /*****************
+                 * I THINK THIS CODE IS MORE EFFICIENT. NEED TO TEST ANOTHER TIME.
+                 * 
+                // check if adjacent positions are legal moves
+
+                // check north: going up one row (-1) and keeping same column (0)
+                if (adjacent_support(who, -1, 0, row, column, board)) { legal_moves[row][column] = who; }
+
+                // check south: going down one row (1) and keeping same column (0)
+                else if (adjacent_support(who, 1, 0, row, column, board)) { legal_moves[row][column] = who; }
+
+                // check west: keep in the same row (0) and going to the left column (-1)
+                else if (adjacent_support(who, 0, -1, row, column, board)) { legal_moves[row][column] = who; }
+
+                // check east: keep in the same row (0) and going to the right column (1)
+                else if (adjacent_support(who, 0, 1, row, column, board)) { legal_moves[row][column] = who; }
+
+                // check nw: going up one row (-1) and keeping same column (0)
+                else if (adjacent_support(who, -1, -1, row, column, board)) { legal_moves[row][column] = who; }
+
+                // check ne: going down one row (1) and keeping same column (0)
+                else if (adjacent_support(who, -1, 1, row, column, board)) { legal_moves[row][column] = who; }
+
+                // check sw: keep in the same row (0) and going to the left column (-1)
+                else if (adjacent_support(who, 1, -1, row, column, board)) { legal_moves[row][column] = who; }
+
+                    // check se: keep in the same row (0) and going to the right column (1)
+                else if (adjacent_support(who, 1, 1, row, column, board)) { legal_moves[row][column] = who; }
+                
+                END OF EFFICIENT CODE*/
+            }
+        }
+
+    }
+    return legal_moves;
+
+}
+
+// Flip one line of tokens
+function flip_line(who, delta_r, delta_c, r, c, board) {
+
+    // Check to see if position to be flipped is on the board
+    if ((r + delta_r < 0) || (r + delta_r > 7)) {
+        return false;
+    }
+    if ((c + delta_c < 0) || (c + delta_c > 7)) {
+        return false;
+    }
+
+    // if we encounter a space, then we are not going to flip it
+    if (board[r + delta_r][c + delta_c] === ' ') {
+        return false;
+    }
+
+    // if we encounter our color, then it is the last one to be checked on the row
+    if (board[r + delta_r][c + delta_c] === who) {
+        return true;
+    }
+    // we must have encountered a token of opposite color. We will keep moving along the line.
+    else {
+        if (flip_line(who, delta_r, delta_c, r + delta_r, c + delta_c, board)) {
+            board[r + delta_r][c + delta_c] = who;      // Set the color
+            return true;
+        }
+        else {
+            // if we walked of the board, or never encountered a token of our color, then we will return false
+            return false;
+        }
+    }
+}
+
+
+
+// Flip tokens that need to be flipped as result of a new token placed on the board
+function flip_tokens(who, row, column, board) {
+    flip_line(who, -1, 0, row, column, board);  // check north: going up one row (-1) and keeping same column (0)
+    flip_line(who, 1, 0, row, column, board);   // check south: going down one row (1) and keeping same column (0)
+    flip_line(who, 0, -1, row, column, board);  // check west: keep in the same row (0) and going to the left column (-1)
+    flip_line(who, 0, 1, row, column, board);   // check east: keep in the same row (0) and going to the right column (1)
+
+    flip_line(who, -1, -1, row, column, board); // check nw: going up one row (-1) and keeping same column (0)
+    flip_line(who, -1, 1, row, column, board);  // check ne: going down one row (1) and keeping same column (0)
+    flip_line(who, 1, -1, row, column, board);  // check sw: keep in the same row (0) and going to the left column (-1)
+    flip_line(who, 1, 1, row, column, board);   // check se: keep in the same row (0) and going to the right column (1)
+
+
+}
+
+
+
+
 
 
 // Send game update to client
@@ -869,22 +1095,43 @@ function send_game_update(socket, game_id, message) {
 
     // Step 6 - Check if the game is over
     // Count number of tokens to see if board is full
-    let count = 0;
+    let legal_moves = 0;
+    let whitesum = 0;
+    let blacksum = 0;
+
     for (let row = 0; row < 8; row++) {
         for (let column = 0; column < 8; column++) {
-            if (games[game_id].board[row][column] != ' ') {
-                count++;
+            if (games[game_id].legal_moves[row][column] != ' ') {
+                legal_moves++;
+            }
+            if (games[game_id].board[row][column] != 'w') {
+                whitesum++;
+            }
+            if (games[game_id].board[row][column] != 'b') {
+                blacksum++;
             }
         }
     }
 
     // Step 7 - If game over, send appropriate message
-    if (count === 64) {
+    // Check if there is no legal moves left
+    if (legal_moves === 0) {
+
+        // if no more legal moves, check to see who won
+        let winner = "Tie Game";
+        if (whitesum > blacksum) {
+            winner = 'white';
+        }
+        else if (blacksum < whitesum) {
+            winner = 'black';
+        }
+        
+
         let payload = {}
         payload.result = 'success';
         payload.game_id = game_id;
         payload.game = games[game_id];
-        payload.who_won = 'everyone';
+        payload.who_won = winner;
         
         io.in(game_id).emit('game_over', payload);
 
