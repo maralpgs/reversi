@@ -620,10 +620,23 @@ socket.on('game_over', (payload) => {
         return;
     }
 
+    
+    let winner = payload.who_won;
+    if ( winner === 'white') {
+        winner = payload.game.player_white.username + ' won the game!';
+    }
+    else if (winner === 'black') {
+        winner = payload.game.player_black.username + ' won the game!';
+    }
+    console.log("Who won: " + payload.who_won);
+    console.log('player_white username : ' + payload.game.player_white.username);
+    console.log('player_black username : ' + payload.game.player_black.username);
+    console.log("Winner: " + winner);
+
     // Announce that game is over, and add a button to go to lobby
     let nodeA = $("<div id='game_over'></div>");
     let nodeB = $("<h1>Game Over</h1>");
-    let nodeC = $("<h2>"+ payload.who_won+" won</h2>");
+    let nodeC = $("<h2>"+ winner+"</h2>");
     let nodeD = $("<a href='lobby.html?username=" + username + "' class='btn btn-lg btn-success' role='button' >Return to lobby</a>");
     nodeA.append(nodeB);
     nodeA.append(nodeC);

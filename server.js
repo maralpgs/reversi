@@ -1104,10 +1104,10 @@ function send_game_update(socket, game_id, message) {
             if (games[game_id].legal_moves[row][column] != ' ') {
                 legal_moves++;
             }
-            if (games[game_id].board[row][column] != 'w') {
+            if (games[game_id].board[row][column] == 'w') {
                 whitesum++;
             }
-            if (games[game_id].board[row][column] != 'b') {
+            if (games[game_id].board[row][column] == 'b') {
                 blacksum++;
             }
         }
@@ -1117,14 +1117,20 @@ function send_game_update(socket, game_id, message) {
     // Check if there is no legal moves left
     if (legal_moves === 0) {
 
+        console.log("whitesum: " + whitesum);
+        console.log("blacksum: " + blacksum);
+
         // if no more legal moves, check to see who won
         let winner = "Tie Game";
         if (whitesum > blacksum) {
             winner = 'white';
         }
-        else if (blacksum < whitesum) {
+        else if (blacksum > whitesum) {
             winner = 'black';
         }
+
+
+        console.log("winner: " + winner);
         
 
         let payload = {}
@@ -1132,7 +1138,9 @@ function send_game_update(socket, game_id, message) {
         payload.game_id = game_id;
         payload.game = games[game_id];
         payload.who_won = winner;
-        
+
+        console.log("payload.who_won: " + payload.who_won);
+
         io.in(game_id).emit('game_over', payload);
 
         // Delete old games after one hour
