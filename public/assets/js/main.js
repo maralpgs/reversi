@@ -380,6 +380,9 @@ socket.on('game_update', (payload) => {
         console.log(board);
     }
 
+    let white_username = payload.game.player_white.username;
+    let black_username = payload.game.player_black.username;
+    const t = Date.now();
 
     // Update my color
     if (socket.id === payload.game.player_white.socket) {
@@ -394,26 +397,31 @@ socket.on('game_update', (payload) => {
 
    
     if (my_color === 'white') {
-        $('#my_color').html('<h3 id="my_color">My token color: white</h3>');
+        $("#my_token").replaceWith('<img id="my_token" width="32" height="32" src="assets/images/white.gif?time=' + t + '" alt="white Token" />');
+        $('#my_color').html('<p class="lead" id="my_color">' +white_username+', your tokens are white</p>');
     }
     else if (my_color === 'black') {
-        $('#my_color').html('<h3 id="my_color">My token color: black</h3>');
+        $("#my_token").replaceWith('<img id="my_token" width="32" height="32" src="assets/images/black.gif?time=' + t + '" alt="Black Token" />');
+        $('#my_color').html('<p class="lead" id="my_color">' +black_username+', your tokens are black</p>');
     }
     else {
-        $('#my_color').html('<h3 id="my_color">My token color: not known</h3>');
+        $('#my_color').replaceWith('<p class="lead" id="my_color">My token color: not known</p>');
     }
 
 
     let whose_turn = payload.game.whose_turn;
     // Update message about whose turn it is
-    if (whose_turn === 'white') {
-        $('#my_color').append('<h4 id="my_color">Turn: white</h4>');
+    if (my_color === whose_turn) {
+        $('#whose_turn').html('<p class="lead" id="whose_turn">It\'s your turn</p >');
+    }
+    else if (whose_turn === 'white') {
+        $('#whose_turn').html('<p class="lead" id="whose_turn">It\'s ' + white_username + '\'s turn</p >');
     }
     else if (whose_turn === 'black') {
-        $('#my_color').append('<h4 id="my_color">Turn: black</h4>');
+        $('#whose_turn').html('<p class="lead" id="whose_turn">It\'s ' + black_username + '\'s turn</p >');
     }
     else {
-        $('#my_color').append('<h4 id="my_color">Turn: error, turn unknown</h4>');
+        $('#whose_turn').html('<p class="lead" id="whose_turn">Nobody\'s turn</p >');
     }
 
 
@@ -485,7 +493,6 @@ socket.on('game_update', (payload) => {
 
 
                 // Update graphic on this cell of the board in html page
-                const t = Date.now();
                 $('#' + row + '_' + column).html('<img class="img-fluid" src="assets/images/' + graphic + '?time=' + t + '"alt="' + altTag + '" />');
 
             }
@@ -516,6 +523,8 @@ socket.on('game_update', (payload) => {
     }
 
     // Update timer
+    // 1 minute timer
+    const time_limit = 60;
     clearInterval(interval_timer)
     interval_timer = setInterval(((last_time) => {
         return (() => {
@@ -523,17 +532,44 @@ socket.on('game_update', (payload) => {
             let elapsed_m = d.getTime() - last_time;
             let minutes = Math.floor(elapsed_m / (1000 * 60));
             let seconds = Math.floor((elapsed_m % (60 * 1000)) / 1000);
-            let total = minutes * 60 + seconds;
+            //let total = minutes * 60 + seconds;
+            total = ((minutes*60)+(seconds / time_limit)) * 100;
             if (total > 100) {
                 total = 100;
-             
+
             }
             $("#elapsed").css("width", total + "%").attr("aria-valuenow", total);
+
+            let text_color = '';
+            if (total < 50) {
+                $("#elapsed").removeClass("bg-success");
+                $("#elapsed").removeClass("bg-warning");
+                $("#elapsed").removeClass("bg-danger");
+                $("#elapsed").addClass("bg-success");
+                text_color = 'white';
+            }
+            else if (total < 75){
+                $("#elapsed").removeClass("bg-success");
+                $("#elapsed").removeClass("bg-warning");
+                $("#elapsed").removeClass("bg-danger");
+                $("#elapsed").addClass("bg-warning");
+                text_color = 'black';
+            }   
+            else if (total > 75) {
+                $("#elapsed").removeClass("bg-success");
+                $("#elapsed").removeClass("bg-warning");
+                $("#elapsed").removeClass("bg-danger");
+                $("#elapsed").addClass("bg-danger");
+                text_color = 'white'; 
+            }
+
+            $("#elapsed").css("color", text_color);
+
 
             let timestring = "" + seconds;
             timestring = timestring.padStart(2, '0');
             timestring = minutes + ":" + timestring;
-            if (total > 100) 
+            if (total >= 100) 
                 $("#elapsed").html("Times up!");
             else {
                 $("#elapsed").html(timestring);
@@ -546,8 +582,10 @@ socket.on('game_update', (payload) => {
 
 
     // Update score
+    $("#whitePlayer").html(white_username);
     $("#whitesum").html(whiteSum);
     $("#blacksum").html(blackSum);
+    $("#blackPlayer").html(black_username);
 
     old_board = board;
 
@@ -585,7 +623,7 @@ socket.on('game_over', (payload) => {
     // Announce that game is over, and add a button to go to lobby
     let nodeA = $("<div id='game_over'></div>");
     let nodeB = $("<h1>Game Over</h1>");
-    let nodeC = $("<h2>"+ payload.who_won+"</h2>");
+    let nodeC = $("<h2>"+ payload.who_won+" won</h2>");
     let nodeD = $("<a href='lobby.html?username=" + username + "' class='btn btn-lg btn-success' role='button' >Return to lobby</a>");
     nodeA.append(nodeB);
     nodeA.append(nodeC);
